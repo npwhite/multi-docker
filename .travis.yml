@@ -1,0 +1,27 @@
+sudo: required
+services:
+    - docker
+
+# Actions that must be taken before testing can begin
+before_install:
+    - docker build -t npwhite/react-test -f ./client/Dockerfile.dev ./client
+
+# Test scripts: if any of the scripts in this section fail (ie exit with nonzero
+#   status code), then travis considers that test to be failed
+script:
+    - docker run -e CI=true npwhite/react-test npm run test
+
+# Actions to be taken upon successful tests
+after_success:
+    # Build production images
+    - docker build -t npwhite/multi-client ./client
+    - docker build -t npwhite/multi-nginx ./nginx
+    - docker build -t npwhite/multi-server ./server
+    - docker build -t npwhite/multi-worker ./worker
+    # Log in to the docker CLI
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+    # Push the production images to docker hub
+    - docker push npwhite/multi-client
+    - docker push npwhite/multi-nginx
+    - docker push npwhite/multi-server
+    - docker push npwhite/multi-worker
